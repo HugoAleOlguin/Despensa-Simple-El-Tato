@@ -73,72 +73,81 @@ const Keypad = ({ onAction }) => {
     };
 
     return (
-        <div className="flex flex-col h-full w-full max-w-md mx-auto bg-white shadow-2xl rounded-3xl overflow-hidden border border-slate-200">
+        <div className="flex flex-col h-full w-full max-w-md mx-auto bg-slate-900 shadow-2xl rounded-3xl overflow-hidden border border-slate-800">
 
-            {/* DISPLAY MEJORADO */}
-            <div className="bg-slate-900 p-8 flex flex-col items-end justify-center h-40 transition-colors duration-200 relative">
-                <span className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-1">Monto a Ingresar</span>
-                <div className="text-6xl font-black text-white tracking-tighter tabular-nums">
+            {/* DISPLAY */}
+            <div className="bg-slate-950 p-4 flex flex-col items-end justify-center h-28 shrink-0 relative border-b border-slate-800">
+                <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Monto a Ingresar</span>
+                <div className="text-5xl font-black text-white tracking-tighter tabular-nums">
                     {displayValue}
                 </div>
                 {/* Indicador sutil de Enter para Venta */}
                 {input && (
-                    <div className="absolute bottom-4 right-8 text-emerald-400 text-xs font-bold animate-pulse">
-                        Presiona ENTER para VENTA
+                    <div className="absolute bottom-2 right-4 text-emerald-400 text-xs font-bold animate-pulse">
+                        ENTER = VENTA
                     </div>
                 )}
             </div>
 
-            {/* NUMERIC GRID */}
-            <div className="flex-1 grid grid-cols-3 gap-2 p-3 bg-slate-50">
-                {[7, 8, 9, 4, 5, 6, 1, 2, 3].map(num => (
-                    <button
-                        key={num}
-                        onClick={() => handleNum(num.toString())}
-                        className={getBtnClass(num.toString(), "bg-white text-4xl font-bold text-slate-800 hover:bg-slate-100 active:bg-slate-200 transition-all rounded-xl shadow-sm border-b-4 border-slate-200 active:border-b-0 active:translate-y-1")}
-                    >
-                        {num}
-                    </button>
-                ))}
+            {/* NUMERIC AREA - Usando FLEX en lugar de GRID para compatibilidad J2 Prime */}
+            <div className="flex-1 bg-slate-900 p-1">
+                <div className="flex flex-wrap h-full">
+                    {[7, 8, 9, 4, 5, 6, 1, 2, 3].map(num => (
+                        <div key={num} className="w-1/3 h-1/5 p-1">
+                            <button
+                                onClick={() => handleNum(num.toString())}
+                                className={getBtnClass(num.toString(), "w-full h-full bg-slate-800 text-3xl font-bold text-slate-200 hover:bg-slate-700 active:bg-slate-600 transition-all rounded-xl shadow-sm border-b-4 border-slate-950 active:border-b-0 active:translate-y-1 flex items-center justify-center")}
+                            >
+                                {num}
+                            </button>
+                        </div>
+                    ))}
 
-                {/* Fila 0 */}
-                <button onClick={handleBack} className={getBtnClass('backspace', "bg-red-50 text-red-600 hover:bg-red-100 border-b-4 border-red-100 active:border-b-0 active:translate-y-1 flex items-center justify-center rounded-xl")}>
-                    <Delete size={36} strokeWidth={2.5} />
-                </button>
-                <button onClick={() => handleNum('0')} className={getBtnClass('0', "bg-white text-4xl font-bold text-slate-800 hover:bg-slate-100 border-b-4 border-slate-200 active:border-b-0 active:translate-y-1 rounded-xl")}>0</button>
-                <button onClick={() => handleNum('00')} className="bg-slate-200 text-2xl font-bold text-slate-600 hover:bg-slate-300 border-b-4 border-slate-300 active:border-b-0 active:translate-y-1 rounded-xl">00</button>
-            </div>
+                    {/* Fila 0 */}
+                    <div className="w-1/3 h-1/5 p-1">
+                        <button onClick={() => handleNum('00')} className="w-full h-full bg-slate-700 text-xl font-bold text-slate-400 hover:bg-slate-600 border-b-4 border-slate-800 active:border-b-0 active:translate-y-1 rounded-xl flex items-center justify-center">00</button>
+                    </div>
+                    <div className="w-1/3 h-1/5 p-1">
+                        <button onClick={() => handleNum('0')} className={getBtnClass('0', "w-full h-full bg-slate-800 text-3xl font-bold text-slate-200 hover:bg-slate-700 border-b-4 border-slate-950 active:border-b-0 active:translate-y-1 rounded-xl flex items-center justify-center")}>0</button>
+                    </div>
+                    <div className="w-1/3 h-1/5 p-1">
+                        <button onClick={handleBack} className={getBtnClass('backspace', "w-full h-full bg-red-900/30 text-red-500 hover:bg-red-900/50 border-b-4 border-red-900/50 active:border-b-0 active:translate-y-1 flex items-center justify-center rounded-xl")}>
+                            <Delete size={28} strokeWidth={2.5} />
+                        </button>
+                    </div>
 
-            {/* ACTION BUTTONS */}
-            <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50 pt-0 pb-4">
+                    {/* ACTION BUTTONS ROW (Integrada en el grid flexible para ocupar el resto) */}
+                    <div className="w-1/3 h-1/5 p-1">
+                        <button
+                            onClick={() => submit('SALIDA')}
+                            className={getBtnClass('s', "w-full h-full bg-orange-900/40 text-orange-500 hover:bg-orange-900/60 flex flex-col items-center justify-center gap-0 rounded-xl border-b-4 border-orange-900/50 active:border-b-0 active:translate-y-1 transition-all")}
+                        >
+                            <Wallet size={20} strokeWidth={2.5} />
+                            <span className="font-bold text-[10px]">SALIDA</span>
+                        </button>
+                    </div>
 
-                <button
-                    onClick={() => submit('SALIDA')}
-                    title="Atajo: Tecla S"
-                    className={getBtnClass('s', "bg-orange-100 text-orange-700 hover:bg-orange-200 py-6 flex flex-col items-center justify-center gap-1 rounded-xl border-b-4 border-orange-200 active:border-b-0 active:translate-y-1 transition-all")}
-                >
-                    <Wallet size={32} strokeWidth={2.5} />
-                    <span className="font-bold text-base">SALIDA (S)</span>
-                </button>
+                    <div className="w-1/3 h-1/5 p-1">
+                        <button
+                            onClick={() => submit('FIADO')}
+                            className={getBtnClass('f', "w-full h-full bg-red-900/40 text-red-500 hover:bg-red-900/60 flex flex-col items-center justify-center gap-0 rounded-xl border-b-4 border-red-900/50 active:border-b-0 active:translate-y-1 transition-all")}
+                        >
+                            <UserMinus size={20} strokeWidth={2.5} />
+                            <span className="font-bold text-[10px]">FIADO</span>
+                        </button>
+                    </div>
 
-                <button
-                    onClick={() => submit('FIADO')}
-                    title="Atajo: Tecla F"
-                    className={getBtnClass('f', "bg-red-100 text-red-700 hover:bg-red-200 py-6 flex flex-col items-center justify-center gap-1 rounded-xl border-b-4 border-red-200 active:border-b-0 active:translate-y-1 transition-all")}
-                >
-                    <UserMinus size={32} strokeWidth={2.5} />
-                    <span className="font-bold text-base">FIADO (F)</span>
-                </button>
+                    <div className="w-1/3 h-1/5 p-1">
+                        <button
+                            onClick={() => submit('VENTA')}
+                            className={getBtnClass('enter', "w-full h-full bg-emerald-600 text-white hover:bg-emerald-500 flex flex-col items-center justify-center gap-0 rounded-xl border-b-4 border-emerald-800 active:border-b-0 active:translate-y-1 shadow-lg transition-all")}
+                        >
+                            <ShoppingBag size={24} strokeWidth={2.5} />
+                            <span className="font-black text-sm tracking-wide">VENTA</span>
+                        </button>
+                    </div>
 
-                <button
-                    onClick={() => submit('VENTA')}
-                    title="Atajo: ENTER"
-                    className={getBtnClass('enter', "bg-emerald-500 text-white hover:bg-emerald-600 py-6 flex flex-col items-center justify-center gap-1 rounded-xl border-b-4 border-emerald-700 active:border-b-0 active:translate-y-1 shadow-lg transition-all")}
-                >
-                    <ShoppingBag size={36} strokeWidth={2.5} />
-                    <span className="font-black text-xl tracking-wide">VENTA ↵</span>
-                </button>
-
+                </div>
             </div>
         </div>
     );

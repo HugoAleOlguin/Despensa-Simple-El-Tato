@@ -7,7 +7,7 @@ import ClientDetailView from './components/ClientDetailView';
 import HistoryView from './components/HistoryView';
 import { RefreshCw, LayoutGrid, Users, History, Calculator } from 'lucide-react';
 
-const API_URL = `http://${window.location.hostname}:3001`;
+const API_URL = ''; // Relative path, works with same-origin policy automatically
 
 function App() {
   const [view, setView] = useState('POS'); // POS | DEBT | HISTORY
@@ -146,9 +146,10 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 font-sans text-slate-800 flex flex-col h-screen overflow-hidden">
+    // FIX MOBILE: Removed fixed height and overflow-hidden for mobile. Added min-h-screen.
+    <div className="min-h-screen bg-slate-950 font-sans text-slate-100 flex flex-col md:h-screen md:overflow-hidden">
       {/* NAVBAR */}
-      <nav className="bg-slate-900 text-white p-2 flex justify-between items-center shadow-md z-50 shrink-0 px-4">
+      <nav className="bg-slate-900 text-white p-2 flex justify-between items-center shadow-lg hover:shadow-emerald-900/20 transition-all z-50 shrink-0 px-4 border-b border-slate-800 sticky top-0">
 
         {/* LEFT: DATE SELECTOR IMPROVED */}
         <div className="flex items-center gap-2 bg-slate-800 rounded-lg p-1 border border-slate-700">
@@ -164,19 +165,19 @@ function App() {
         <div className="flex gap-2">
           <button
             onClick={() => setView('POS')}
-            className={`p-2 md:px-6 md:py-2 rounded-lg font-bold transition-all flex items-center gap-2 ${view === 'POS' ? 'bg-emerald-500 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+            className={`p-2 md:px-6 md:py-2 rounded-lg font-bold transition-all flex items-center gap-2 ${view === 'POS' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
           >
             <Calculator size={18} /> <span className="hidden md:inline">CAJA (F1)</span>
           </button>
           <button
             onClick={() => { setView('DEBT'); setSelectedClient(null); }}
-            className={`p-2 md:px-6 md:py-2 rounded-lg font-bold transition-all flex items-center gap-2 ${view === 'DEBT' ? 'bg-red-500 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+            className={`p-2 md:px-6 md:py-2 rounded-lg font-bold transition-all flex items-center gap-2 ${view === 'DEBT' ? 'bg-red-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
           >
             <Users size={18} /> <span className="hidden md:inline">DEUDAS (F2)</span>
           </button>
           <button
             onClick={() => setView('HISTORY')}
-            className={`p-2 md:px-6 md:py-2 rounded-lg font-bold transition-all flex items-center gap-2 ${view === 'HISTORY' ? 'bg-blue-500 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+            className={`p-2 md:px-6 md:py-2 rounded-lg font-bold transition-all flex items-center gap-2 ${view === 'HISTORY' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
           >
             <History size={18} /> <span className="hidden md:inline">HIST (F3)</span>
           </button>
@@ -186,23 +187,23 @@ function App() {
       </nav>
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 overflow-hidden p-4">
-        <div className="max-w-6xl mx-auto h-full bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+      <main className="flex-1 p-2 md:p-4 md:overflow-hidden">
+        <div className="max-w-6xl mx-auto h-full bg-slate-900 rounded-xl shadow-2xl md:overflow-hidden border border-slate-800 flex flex-col">
 
           {/* VIEW: POS */}
           {view === 'POS' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 h-full">
+            <div className="flex flex-col md:grid md:grid-cols-2 md:h-full overflow-y-auto md:overflow-hidden">
               {/* LEFT: CALC */}
-              <div className="p-6 bg-slate-100 flex flex-col gap-4 border-r border-slate-200">
+              <div className="p-4 md:p-6 bg-slate-900 flex flex-col gap-4 border-b md:border-b-0 md:border-r border-slate-800 shrink-0">
                 {/* HEADERS */}
-                <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div className="flex justify-between items-center bg-slate-800 p-4 rounded-xl shadow-lg border border-slate-700">
                   <div>
                     <p className="text-xs font-bold text-slate-400 uppercase">Ventas {activeDate === new Date().toISOString().split('T')[0] ? 'Hoy' : activeDate}</p>
-                    <h1 className="text-4xl font-black text-emerald-500 tracking-tight">${summary.ventas}</h1>
+                    <h1 className="text-4xl font-black text-emerald-400 tracking-tight">${summary.ventas}</h1>
                   </div>
                   <div className="text-right">
                     <p className="text-xs font-bold text-slate-400 uppercase">En Caja (Est.)</p>
-                    <p className="text-lg font-bold text-slate-700">${(summary.ventas) - summary.salidas}</p>
+                    <p className="text-lg font-bold text-slate-200">${(summary.ventas) - summary.salidas}</p>
                   </div>
                 </div>
                 <div className="flex-1">
@@ -210,18 +211,18 @@ function App() {
                 </div>
               </div>
               {/* RIGHT: LIST */}
-              <div className="p-4 bg-slate-50 flex flex-col gap-4 overflow-hidden">
+              <div className="p-4 bg-slate-950 flex flex-col gap-4 md:overflow-hidden min-h-[500px] md:min-h-0">
                 <div className="grid grid-cols-2 gap-2 shrink-0">
-                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 shadow-md">
                     <p className="text-xs font-bold text-slate-400 uppercase">Salidas</p>
-                    <p className="text-xl font-bold text-orange-600">${summary.salidas}</p>
+                    <p className="text-xl font-bold text-orange-400">${summary.salidas}</p>
                   </div>
-                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 shadow-md">
                     <p className="text-xs font-bold text-slate-400 uppercase">Fiado</p>
-                    <p className="text-xl font-bold text-red-600">${summary.fiado_hoy}</p>
+                    <p className="text-xl font-bold text-red-400">${summary.fiado_hoy}</p>
                   </div>
                 </div>
-                <div className="flex-1 overflow-hidden bg-white rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex-1 md:overflow-hidden bg-slate-900 rounded-xl border border-slate-800 shadow-inner">
                   <TransactionList transactions={transactions} onDelete={handleDeleteTransaction} />
                 </div>
               </div>
@@ -230,7 +231,7 @@ function App() {
 
           {/* VIEW: DEBT */}
           {view === 'DEBT' && (
-            <div className="h-full">
+            <div className="h-full overflow-y-auto">
               {selectedClient ? (
                 <ClientDetailView
                   client={selectedClient}
@@ -245,7 +246,9 @@ function App() {
 
           {/* VIEW: HISTORY */}
           {view === 'HISTORY' && (
-            <HistoryView />
+            <div className="h-full overflow-y-auto">
+              <HistoryView />
+            </div>
           )}
 
         </div>

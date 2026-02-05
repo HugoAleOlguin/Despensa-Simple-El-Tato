@@ -20,5 +20,5 @@ IF NOT EXIST "node_modules" (
     echo.
 )
 
-call npm run dev
+call node server/index.js
 pause

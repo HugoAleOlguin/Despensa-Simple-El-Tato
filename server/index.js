@@ -1,6 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import db from './db.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3001;
@@ -14,6 +20,10 @@ app.use((req, res, next) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     next();
 });
+
+// SERVE STATIC FILES (Build de React)
+// (__dirname is defined below, moved to top in next chunk)
+app.use(express.static(path.join(__dirname, '../dist')));
 
 // HELPER: TIMEZONE ARGENTINA (UTC-3)
 const getArgentinaDate = () => {
@@ -35,12 +45,6 @@ const getTodayString = () => getArgentinaDate().toISOString().split('T')[0];
 const getNowISO = () => getArgentinaDate().toISOString(); // Local ISO time
 
 // --- BACKUP SYSTEM ---
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const DB_PATH = path.join(__dirname, '..', 'Data', 'despensa.db');
 const BACKUP_DIR = path.join(__dirname, '..', 'Data', 'Backups');
 
@@ -367,6 +371,12 @@ app.get('/api/historial-dias', (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
+// CATCH-ALL ROUTE (Para React Router) - Corregido para Express 5
+app.get(/.*/, (req, res) => {
+    if (req.path.startsWith('/api')) return res.status(404).json({ error: 'Endpoint no encontrado' });
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
+
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🔥 Servidor corriendo en http://localhost:${PORT}`);
 });

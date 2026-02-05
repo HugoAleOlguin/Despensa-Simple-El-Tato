@@ -64,30 +64,30 @@ const ClientDetailView = ({ client, onBack, activeDate }) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-slate-50 relative">
+        <div className="flex flex-col h-full bg-slate-900 relative">
 
             {/* HEADER */}
-            <div className="bg-white p-4 flex items-center justify-between shadow-sm z-10 border-b border-slate-200 sticky top-0">
+            <div className="bg-slate-800 p-4 flex items-center justify-between shadow-lg z-10 border-b border-slate-700 sticky top-0">
                 <div className="flex items-center gap-3">
-                    <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                        <ArrowLeft size={24} className="text-slate-600" />
+                    <button onClick={onBack} className="p-2 hover:bg-slate-700 rounded-full transition-colors">
+                        <ArrowLeft size={24} className="text-slate-400 hover:text-white" />
                     </button>
                     <div>
-                        <h2 className="font-bold text-xl text-slate-800">{client.nombre}</h2>
+                        <h2 className="font-bold text-xl text-slate-200">{client.nombre}</h2>
                         <div className="flex items-center gap-2 text-sm text-slate-500">
                             {isEditingPhone ? (
                                 <div className="flex items-center gap-1">
                                     <input
-                                        className="bg-slate-100 border border-slate-300 rounded px-2 py-1 w-32"
+                                        className="bg-slate-700 border border-slate-600 rounded px-2 py-1 w-32 text-white placeholder-slate-500"
                                         value={phone}
                                         onChange={e => setPhone(e.target.value)}
                                         placeholder="Teléfono"
                                     />
-                                    <button onClick={savePhone} className="bg-emerald-500 text-white p-1 rounded hover:bg-emerald-600"><Save size={14} /></button>
-                                    <button onClick={() => setIsEditingPhone(false)} className="bg-slate-200 text-slate-600 p-1 rounded hover:bg-slate-300"><X size={14} /></button>
+                                    <button onClick={savePhone} className="bg-emerald-600 text-white p-1 rounded hover:bg-emerald-500"><Save size={14} /></button>
+                                    <button onClick={() => setIsEditingPhone(false)} className="bg-slate-700 text-slate-400 p-1 rounded hover:bg-slate-600"><X size={14} /></button>
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setIsEditingPhone(true)}>
+                                <div className="flex items-center gap-2 group cursor-pointer hover:text-blue-400 transition-colors" onClick={() => setIsEditingPhone(true)}>
                                     <span>{phone || 'Sin teléfono'}</span>
                                     <Edit2 size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
@@ -95,7 +95,7 @@ const ClientDetailView = ({ client, onBack, activeDate }) => {
                         </div>
                     </div>
                 </div>
-                <div className={`text-right ${client.deuda_actual > 0 ? 'text-red-600' : (client.deuda_actual < 0 ? 'text-emerald-500' : 'text-slate-400')}`}>
+                <div className={`text-right ${client.deuda_actual > 0 ? 'text-red-400' : (client.deuda_actual < 0 ? 'text-emerald-400' : 'text-slate-500')}`}>
                     <p className="text-xs font-bold uppercase">{client.deuda_actual < 0 ? 'A Favor' : 'Deuda'}</p>
                     <p className="text-3xl font-black">${Math.abs(client.deuda_actual)}</p>
 
@@ -103,17 +103,16 @@ const ClientDetailView = ({ client, onBack, activeDate }) => {
             </div>
 
             {/* LIST */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2 pb-24">
+            <div className="flex-1 px-4 py-4 space-y-2 pb-24">
                 {history.map(item => (
-                    <div key={item.id} className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center">
+                    <div key={item.id} className="bg-slate-800 p-3 rounded-xl border border-slate-700 shadow-sm flex justify-between items-center">
                         <div className="flex items-start gap-3">
-                            <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${item.monto > 0 ? 'bg-red-400' : 'bg-emerald-400'}`}></div>
+                            <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${item.monto > 0 ? 'bg-red-500' : 'bg-emerald-500'}`}></div>
                             <div>
-                                <p className="font-bold text-slate-800 text-sm">{item.detalle || 'Sin detalle'}</p>
-                                {/* Removed date/time display as per instruction */}
+                                <p className="font-bold text-slate-200 text-sm">{item.detalle || 'Sin detalle'}</p>
                             </div>
                         </div>
-                        <span className={`font-bold ${item.monto > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                        <span className={`font-bold ${item.monto > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
                             {item.monto > 0 ? `$${item.monto}` : `- $${Math.abs(item.monto)}`}
                         </span>
                     </div>
@@ -121,11 +120,11 @@ const ClientDetailView = ({ client, onBack, activeDate }) => {
             </div>
 
             {/* FLOATING ACTION BUTTON: PAY */}
-            <div className="absolute bottom-0 left-0 w-full p-4 bg-white border-t border-slate-200 shadow-up">
+            <div className="fixed md:absolute bottom-0 left-0 w-full p-4 bg-slate-800 border-t border-slate-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.3)]">
                 {!showPayInput ? (
                     <button
                         onClick={() => setShowPayInput(true)}
-                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-xl text-xl shadow-lg flex items-center justify-center gap-2"
+                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl text-xl shadow-lg flex items-center justify-center gap-2"
                     >
                         <DollarSign size={24} />
                         ENTREGAR DINERO
@@ -137,7 +136,7 @@ const ClientDetailView = ({ client, onBack, activeDate }) => {
                             <input
                                 autoFocus
                                 type="number"
-                                className="flex-1 bg-slate-100 p-4 rounded-xl text-3xl font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                                className="flex-1 bg-slate-900 p-4 rounded-xl text-3xl font-bold text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none border border-slate-700"
                                 placeholder="$0"
                                 value={payAmount}
                                 onChange={e => setPayAmount(e.target.value)}
@@ -145,12 +144,12 @@ const ClientDetailView = ({ client, onBack, activeDate }) => {
                             />
                             <button
                                 onClick={handleManualPayment}
-                                className="bg-emerald-500 text-white px-6 rounded-xl font-bold"
+                                className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 rounded-xl font-bold"
                             >
                                 CONFIRMAR
                             </button>
                         </div>
-                        <button onClick={() => setShowPayInput(false)} className="w-full text-slate-400 text-xs py-2">Cancelar</button>
+                        <button onClick={() => setShowPayInput(false)} className="w-full text-slate-500 hover:text-slate-300 text-xs py-2">Cancelar</button>
                     </div>
                 )}
             </div>
