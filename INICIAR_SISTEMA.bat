@@ -20,5 +20,18 @@ IF NOT EXIST "node_modules" (
     echo.
 )
 
+REM Chequear si existe la carpeta de produccion (dist)
+IF NOT EXIST "dist" (
+    echo.
+    echo [NO SE DETECTA LA VERSION OPTIMIZADA]
+    echo Construyendo el sistema para uso ligero...
+    echo (Esto pasa solo una vez)
+    echo.
+    call npm run build
+    echo.
+    echo [OPTIMIZACION COMPLETADA]
+    echo.
+)
+
 call node server/index.js
 pause
