@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // DEFINICIÓN DE LA RUTA DE DATOS (FUERA DEL CÓDIGO)
-const DATA_DIR = path.resolve(__dirname, '../../Data');
+const DATA_DIR = path.resolve(__dirname, '../Data');
 const DB_PATH = path.join(DATA_DIR, 'despensa.db');
 
 // Asegurar que existe el directorio

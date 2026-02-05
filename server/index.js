@@ -41,8 +41,8 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DB_PATH = path.join(__dirname, '..', '..', 'Data', 'despensa.db');
-const BACKUP_DIR = path.join(__dirname, '..', '..', 'Data', 'Backups');
+const DB_PATH = path.join(__dirname, '..', 'Data', 'despensa.db');
+const BACKUP_DIR = path.join(__dirname, '..', 'Data', 'Backups');
 
 // Ensure Backup Dir Exists
 if (!fs.existsSync(BACKUP_DIR)) {
