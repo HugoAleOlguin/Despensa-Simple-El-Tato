@@ -377,6 +377,28 @@ app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🔥 Servidor corriendo en http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', async () => {
+    // Detectar IP Local
+    const { networkInterfaces } = await import('os');
+    const nets = networkInterfaces();
+    let localIp = 'localhost';
+
+    for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+            // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
+            if (net.family === 'IPv4' && !net.internal) {
+                localIp = net.address;
+                break;
+            }
+        }
+        if (localIp !== 'localhost') break;
+    }
+
+    console.log('\n===================================================');
+    console.log('  🚀 SISTEMA TATO ONLINE - MODO DEBUG');
+    console.log('===================================================');
+    console.log(`  ➜  PC ADMIN:   http://localhost:${PORT}`);
+    console.log(`  ➜  CELULAR:    http://${localIp}:${PORT}`);
+    console.log('===================================================\n');
+    console.log('  [LOG DE ACTIVIDAD]');
 });

@@ -33,5 +33,6 @@ IF NOT EXIST "dist" (
     echo.
 )
 
+
 call node server/index.js
 pause

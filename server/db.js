@@ -16,10 +16,33 @@ if (!fs.existsSync(DATA_DIR)) {
 }
 
 console.log('🔌 Conectando a Base de Datos en:', DB_PATH);
-const db = new Database(DB_PATH, { verbose: console.log });
+
+// Custom Logger para mejor orden
+const logQuery = (query) => {
+    // Limpiar espacios extra y saltos de línea
+    const cleanQuery = query.replace(/\s+/g, ' ').trim();
+
+    // Diferenciar lecturas de escrituras visualmente (Simple Check)
+    const isWrite = /^(INSERT|UPDATE|DELETE)/i.test(cleanQuery);
+    const prefix = isWrite ? '📝 [DB WRITE]' : '🔍 [DB READ] ';
+
+    // (Opcional: Colores ANSI si la consola lo soporta, Windows 10+ sí)
+    // Write: Amarillo/Dorado, Read: Gris Oscuro/Dim
+    if (isWrite) {
+        console.log(`\x1b[33m${prefix} ${cleanQuery}\x1b[0m`);
+    } else {
+        console.log(`\x1b[90m${prefix} ${cleanQuery.substring(0, 100)}${cleanQuery.length > 100 ? '...' : ''}\x1b[0m`);
+    }
+};
+
+const db = new Database(DB_PATH, { verbose: logQuery });
 
 // Inicialización de Tablas
 const initDB = () => {
+    // OPTIMIZACIÓN RENDIMIENTO: WAL Mode + Synchronous Normal
+    db.pragma('journal_mode = WAL');
+    db.pragma('synchronous = NORMAL');
+
     // Tabla: Movimientos
     db.exec(`
         CREATE TABLE IF NOT EXISTS movimientos (
@@ -33,6 +56,10 @@ const initDB = () => {
         )
     `);
 
+    // INDEXES MOVIMIENTOS (Critical for performance on low-end PC)
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_movimientos_fecha ON movimientos(fecha)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_movimientos_tipo ON movimientos(tipo)`);
+
     // Tabla: Clientes
     db.exec(`
         CREATE TABLE IF NOT EXISTS clientes (
@@ -42,6 +69,7 @@ const initDB = () => {
             deuda_actual INTEGER DEFAULT 0
         )
     `);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_clientes_nombre ON clientes(nombre)`);
 
     // TABLA: Historial Fiados (deuda_log)
     db.exec(`
@@ -56,12 +84,15 @@ const initDB = () => {
             FOREIGN KEY(cliente_id) REFERENCES clientes(id)
         )
     `);
+    // INDEXES DEUDA_LOG
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_deuda_cliente ON deuda_log(cliente_id)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_deuda_fecha ON deuda_log(fecha)`);
 
     // Migración manual: Agregar columnas si no existen (para evitar borrar la DB)
     try { db.exec("ALTER TABLE deuda_log ADD COLUMN estado TEXT DEFAULT 'PENDIENTE'"); } catch (e) { }
     try { db.exec("ALTER TABLE movimientos ADD COLUMN fecha_op DATE"); } catch (e) { } // Por si acaso queramos fecha real vs log
 
-    console.log('✅ Tablas inicializadas');
+    console.log('✅ Tablas inicializadas e Índices optimizados');
 };
 
 initDB();
