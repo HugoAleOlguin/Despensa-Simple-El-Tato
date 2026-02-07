@@ -25,7 +25,7 @@ const DebtModal = ({ isOpen, onClose, amount, onSubmit }) => {
                 .then(res => res.json())
                 .then(data => setClients(data));
 
-            setTimeout(() => searchInputRef.current?.focus(), 100);
+            // setTimeout(() => searchInputRef.current?.focus(), 100);
         }
     }, [isOpen]);
 
@@ -38,13 +38,13 @@ const DebtModal = ({ isOpen, onClose, amount, onSubmit }) => {
         setSelectedClient(client);
         setIsCreating(false);
         // Focus detail
-        setTimeout(() => detailInputRef.current?.focus(), 50);
+        // setTimeout(() => detailInputRef.current?.focus(), 50);
     };
 
     const handleCreateRequest = () => {
         setSelectedClient(null);
         setIsCreating(true);
-        setTimeout(() => detailInputRef.current?.focus(), 50);
+        // setTimeout(() => detailInputRef.current?.focus(), 50);
     }
 
     const handleSubmit = () => {
@@ -159,7 +159,7 @@ const DebtModal = ({ isOpen, onClose, amount, onSubmit }) => {
                                     </div>
                                 </div>
                                 <button
-                                    onClick={() => { setSelectedClient(null); setIsCreating(false); setTimeout(() => searchInputRef.current?.focus(), 50); }}
+                                    onClick={() => { setSelectedClient(null); setIsCreating(false); /* setTimeout(() => searchInputRef.current?.focus(), 50); */ }}
                                     className="text-slate-400 hover:text-white text-xs font-bold underline"
                                 >
                                     Cambiar

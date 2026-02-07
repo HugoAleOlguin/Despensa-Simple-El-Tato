@@ -1,140 +1,129 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Keypad from './components/Keypad';
+import BottomNav from './components/BottomNav';
+import ActionPanel from './components/ActionPanel';
 import TransactionList from './components/TransactionList';
 import DebtModal from './components/DebtModal';
 import DebtorsView from './components/DebtorsView';
 import ClientDetailView from './components/ClientDetailView';
 import HistoryView from './components/HistoryView';
-import { RefreshCw, LayoutGrid, Users, History, Calculator } from 'lucide-react';
-
-const API_URL = ''; // Relative path, works with same-origin policy automatically
+import SalidaModal from './components/SalidaModal';
+import { History } from 'lucide-react';
+const API_URL = '';
 
 function App() {
   const [view, setView] = useState('POS'); // POS | DEBT | HISTORY
-  const [selectedClient, setSelectedClient] = useState(null); // For Client Detail
+  const [selectedClient, setSelectedClient] = useState(null);
 
-  // DATE LOGIC (MANUAL DATE SELECTION)
-  // FIX: Usar hora local para iniciar, no UTC.
+  // --- INPUT STATE (Lifted from Keypad) ---
+  const [input, setInput] = useState('');
+
+  // --- DATE LOGIC ---
   const getLocalDate = () => {
     const d = new Date();
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     return d.toISOString().split('T')[0];
   };
-
   const [activeDate, setActiveDate] = useState(getLocalDate());
 
-  const changeDate = (days) => {
-    const d = new Date(activeDate);
-    d.setDate(d.getDate() + days); // Sumar/restar dias sobre la fecha activa (sin offset extra)
-    // Ajustar otra vez por si JS hace cosas raras con timezones al reconvertir string
-    // Mejor truco: trabajar con strings YYYY-MM-DD
-    const newDate = new Date(d.valueOf() + d.getTimezoneOffset() * 60000); // Fix utc conversion
-    setActiveDate(d.toISOString().split('T')[0]);
-  };
-
+  // --- DATA STATE ---
   const [transactions, setTransactions] = useState([]);
   const [summary, setSummary] = useState({ ventas: 0, salidas: 0, fiado_hoy: 0 });
 
-  // State for Fiado Modal
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // --- MODALS STATE ---
+  const [isFiadoModalOpen, setIsFiadoModalOpen] = useState(false);
+  const [isSalidaModalOpen, setIsSalidaModalOpen] = useState(false);
   const [pendingAmount, setPendingAmount] = useState(0);
 
-  // KEYBOARD SHORTCUTS
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Ignorar si hay modal abierto o inputs focus
-      if (isModalOpen || e.target.tagName === 'INPUT') return;
-
-      // Shortcuts
-      // F1 -> POS, F2 -> Deudas, F3 -> Historial
-      if (e.key === 'F1') { e.preventDefault(); setView('POS'); }
-      if (e.key === 'F2') { e.preventDefault(); setView('DEBT'); }
-      if (e.key === 'F3') { e.preventDefault(); setView('HISTORY'); }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isModalOpen]);
-
-  const fetchData = useCallback(async () => {
-    try {
-      // 1. Resumen
-      const resResumen = await fetch(`${API_URL}/api/resumen-dia?fecha=${activeDate}`);
-      const dataResumen = await resResumen.json();
-      setSummary(dataResumen);
-
-      // 2. Lista de Movimientos (Ticket Persistente)
-      const resMovs = await fetch(`${API_URL}/api/movimientos-dia?fecha=${activeDate}`);
-      const dataMovs = await resMovs.json();
-      setTransactions(dataMovs.map(m => ({
-        ...m,
-        timestamp: m.timestamp || new Date().toISOString() // Fallback if needed
-      })));
-
-    } catch (err) {
-      console.error("Error", err);
-    }
-  }, [activeDate]);
-
-  useEffect(() => {
-    // When date changes, refresh data. UseEffect already handles cleanup.
-    // 'setTransactions([])' is optional visually but good for UX so it doesn't show old data while loading
-    // setTransactions([]) -> Removing this to avoid flashing on re-fetch
-    fetchData();
-  }, [fetchData, view]); // Refetch when changing views
-
-  // REAL-TIME UPDATES (SSE)
-  // Ref to track modal state without triggering re-renders of the effect
-  const isModalOpenRef = useRef(isModalOpen);
-  useEffect(() => {
-    isModalOpenRef.current = isModalOpen;
-  }, [isModalOpen]);
-
-  useEffect(() => {
-    const eventSource = new EventSource(`${API_URL}/api/events`);
-
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'UPDATE') {
-          // Only update if modal is NOT open to avoid interrupting user
-          if (!isModalOpenRef.current) {
-            fetchData();
-          }
-        }
-      } catch (e) {
-        console.error("Error parsing SSE", e);
-      }
-    };
-
-    return () => {
-      eventSource.close();
-    };
-  }, [fetchData]); // Reconnect if fetchData (activeDate) changes
-
-  const handleKeypadAction = async (tipo, monto) => {
-    if (tipo === 'FIADO') {
-      setPendingAmount(monto);
-      setIsModalOpen(true);
+  // --- INPUT HANDLERS ---
+  const handleNumInput = (val) => {
+    if (val === 'DEL') {
+      setInput(prev => prev.slice(0, -1));
       return;
     }
+    if (input.length > 9) return;
+    setInput(prev => prev + val);
+  };
 
+  // --- ACTION HANDLERS ---
+  const handleActionClick = (actionType) => {
+    if (!input) return; // No action if empty
+    const amount = parseInt(input);
+
+    if (actionType === 'FIADO') {
+      setPendingAmount(amount);
+      setIsFiadoModalOpen(true);
+      return;
+    }
+    if (actionType === 'SALIDA') {
+      setPendingAmount(amount);
+      setIsSalidaModalOpen(true);
+      return;
+    }
+    if (actionType === 'VENTA') {
+      processTransaction('VENTA', amount);
+      setInput(''); // Clear after sale
+    }
+  };
+
+  const processTransaction = async (tipo, monto, detalle = '') => {
     try {
       await fetch(`${API_URL}/api/movimiento`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo, monto, fecha: activeDate })
+        body: JSON.stringify({ tipo, monto, detalle, fecha: activeDate })
       });
-
-      // Optimistic update IS NOT NEEDED if we just fetch, but fetching is slower.
-      // Let's optimistic update but adhering to the DB struct format if possible, 
-      // OR just simple refetch. Refetch is safer for persistence consistency.
+      // fetchData triggered by SSE or manual call below
       fetchData();
     } catch (err) {
       alert(err.message);
     }
   };
 
+  // --- DATA FETCHING ---
+  const fetchData = useCallback(async () => {
+    try {
+      const resResumen = await fetch(`${API_URL}/api/resumen-dia?fecha=${activeDate}`);
+      const dataResumen = await resResumen.json();
+      setSummary(dataResumen);
+
+      const resMovs = await fetch(`${API_URL}/api/movimientos-dia?fecha=${activeDate}`);
+      const dataMovs = await resMovs.json();
+      setTransactions(dataMovs.map(m => ({
+        ...m,
+        timestamp: m.timestamp || new Date().toISOString()
+      })));
+    } catch (err) {
+      console.error("Error", err);
+    }
+  }, [activeDate]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData, view]);
+
+  // --- SSE REAL-TIME ---
+  const isModalOpenRef = useRef(false);
+  useEffect(() => {
+    isModalOpenRef.current = isFiadoModalOpen || isSalidaModalOpen;
+  }, [isFiadoModalOpen, isSalidaModalOpen]);
+
+  useEffect(() => {
+    const eventSource = new EventSource(`${API_URL}/api/events`);
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'UPDATE' && !isModalOpenRef.current) {
+          fetchData();
+        }
+      } catch (e) {
+        console.error("Error SSE", e);
+      }
+    };
+    return () => eventSource.close();
+  }, [fetchData]);
+
+  // --- MODAL SUBMITS ---
   const handleFiadoSubmit = async (payload) => {
     try {
       await fetch(`${API_URL}/api/fiado/nuevo`, {
@@ -142,155 +131,137 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...payload, fecha: activeDate })
       });
-      setIsModalOpen(false);
+      setIsFiadoModalOpen(false);
+      setInput('');
       fetchData();
     } catch (err) {
       alert(err.message);
     }
   };
 
-  const formatDateLabel = (dateStr) => {
-    const [y, m, d] = dateStr.split('-');
-    const date = new Date(y, m - 1, d);
-    return date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const handleSalidaSubmit = async (detalle) => {
+    await processTransaction('SALIDA', pendingAmount, detalle);
+    setIsSalidaModalOpen(false);
+    setInput('');
   };
 
+  // --- DELETE TRANSACTION ---
   const handleDeleteTransaction = async (id, tipo) => {
+    if (!window.confirm("¿Borrar este movimiento?")) return;
     try {
-      const res = await fetch(`${API_URL}/api/transaccion`, {
+      await fetch(`${API_URL}/api/transaccion`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, tipo })
       });
-      const data = await res.json();
-
-      if (data.error) {
-        alert("Error: " + data.error);
-      } else {
-        fetchData(); // Recargar lista
-      }
+      fetchData();
     } catch (err) {
-      alert("Error al conectar: " + err.message);
+      alert("Error: " + err.message);
     }
   };
 
-  return (
-    // FIX MOBILE: Removed fixed height and overflow-hidden for mobile. Added min-h-screen.
-    <div className="min-h-screen bg-slate-950 font-sans text-slate-100 flex flex-col md:h-screen md:overflow-hidden">
-      {/* NAVBAR */}
-      <nav className="bg-slate-900 text-white p-2 flex justify-between items-center shadow-lg hover:shadow-emerald-900/20 transition-all z-50 shrink-0 px-4 border-b border-slate-800 sticky top-0">
+  // --- FORMATTING ---
+  const displayValue = input ? new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(input) : '$0';
 
-        {/* LEFT: DATE SELECTOR IMPROVED */}
-        <div className="flex items-center gap-2 bg-slate-800 rounded-lg p-1 border border-slate-700">
+  return (
+    <div className="min-h-screen bg-slate-950 font-sans text-slate-100 flex flex-col pb-24 md:pb-0">
+
+      {/* 1. HEADER (Compact) */}
+      <div className="bg-slate-900 p-3 flex justify-between items-center shadow-md border-b border-slate-800 sticky top-0 z-10">
+        <div>
+          <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Ventas de Hoy</p>
+          <p className="text-2xl font-black text-emerald-400 leading-none">${summary.ventas}</p>
+        </div>
+        <div>
           <input
             type="date"
             value={activeDate}
             onChange={(e) => setActiveDate(e.target.value)}
-            className="bg-transparent text-white font-bold border-none focus:ring-0 text-sm cursor-pointer outline-none w-32"
+            className="bg-slate-800 text-white font-bold rounded-lg px-2 py-1 text-xs border border-slate-700 outline-none focus:border-emerald-500"
           />
         </div>
+      </div>
 
-        {/* CENTER: TABS */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setView('POS')}
-            className={`p-2 md:px-6 md:py-2 rounded-lg font-bold transition-all flex items-center gap-2 ${view === 'POS' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-          >
-            <Calculator size={18} /> <span className="hidden md:inline">CAJA (F1)</span>
-          </button>
-          <button
-            onClick={() => { setView('DEBT'); setSelectedClient(null); }}
-            className={`p-2 md:px-6 md:py-2 rounded-lg font-bold transition-all flex items-center gap-2 ${view === 'DEBT' ? 'bg-red-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-          >
-            <Users size={18} /> <span className="hidden md:inline">DEUDAS (F2)</span>
-          </button>
-          <button
-            onClick={() => setView('HISTORY')}
-            className={`p-2 md:px-6 md:py-2 rounded-lg font-bold transition-all flex items-center gap-2 ${view === 'HISTORY' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-          >
-            <History size={18} /> <span className="hidden md:inline">HIST (F3)</span>
-          </button>
-        </div>
+      {/* VIEW RENDERER */}
+      <div className="flex-1 w-full max-w-md mx-auto md:max-w-4xl md:grid md:grid-cols-2 md:gap-8 md:items-start md:p-6">
 
-        <div className="w-20 hidden md:block"></div> {/* Spacer for balance */}
-      </nav>
+        {view === 'POS' && (
+          <>
+            {/* LEFT COLUMN (Mobile: Top) */}
+            <div className="flex flex-col gap-2">
 
-      {/* MAIN CONTENT AREA */}
-      <main className="flex-1 p-2 md:p-4 md:overflow-hidden">
-        <div className="max-w-6xl mx-auto h-full bg-slate-900 rounded-xl shadow-2xl md:overflow-hidden border border-slate-800 flex flex-col">
-
-          {/* VIEW: POS */}
-          {view === 'POS' && (
-            <div className="flex flex-col md:grid md:grid-cols-2 md:h-full overflow-y-auto md:overflow-hidden">
-              {/* LEFT: CALC */}
-              <div className="p-4 md:p-6 bg-slate-900 flex flex-col gap-4 border-b md:border-b-0 md:border-r border-slate-800 shrink-0">
-                {/* HEADERS */}
-                <div className="flex justify-between items-center bg-slate-800 p-4 rounded-xl shadow-lg border border-slate-700">
-                  <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase">Ventas {activeDate === new Date().toISOString().split('T')[0] ? 'Hoy' : activeDate}</p>
-                    <h1 className="text-4xl font-black text-emerald-400 tracking-tight">${summary.ventas}</h1>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs font-bold text-slate-400 uppercase">En Caja (Est.)</p>
-                    <p className="text-lg font-bold text-slate-200">${(summary.ventas) - summary.salidas}</p>
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <Keypad onAction={handleKeypadAction} />
+              {/* DISPLAY */}
+              {/* DISPLAY */}
+              <div className="p-4 text-center">
+                <p className="text-[10px] text-slate-500 font-bold uppercase mb-0">Monto Actual</p>
+                <div className="text-5xl font-black text-white tracking-tighter tabular-nums drop-shadow-xl">
+                  {displayValue}
                 </div>
               </div>
-              {/* RIGHT: LIST */}
-              <div className="p-4 bg-slate-950 flex flex-col gap-4 md:overflow-hidden min-h-[500px] md:min-h-0">
-                <div className="grid grid-cols-2 gap-2 shrink-0">
-                  <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 shadow-md">
-                    <p className="text-xs font-bold text-slate-400 uppercase">Salidas</p>
-                    <p className="text-xl font-bold text-orange-400">${summary.salidas}</p>
-                  </div>
-                  <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 shadow-md">
-                    <p className="text-xs font-bold text-slate-400 uppercase">Fiado</p>
-                    <p className="text-xl font-bold text-red-400">${summary.fiado_hoy}</p>
-                  </div>
-                </div>
-                <div className="flex-1 md:overflow-hidden bg-slate-900 rounded-xl border border-slate-800 shadow-inner">
-                  <TransactionList transactions={transactions} onDelete={handleDeleteTransaction} />
-                </div>
+
+              {/* KEYPAD */}
+              <Keypad onInput={handleNumInput} />
+
+              {/* ACTION PANEL */}
+              <ActionPanel onAction={handleActionClick} disabled={!input} />
+            </div>
+
+            {/* RIGHT COLUMN (Mobile: Bottom Scroll) */}
+            <div className="p-4 md:h-[600px] md:overflow-y-auto custom-scrollbar md:bg-slate-900 md:rounded-3xl md:border md:border-slate-800">
+              <div className="flex items-center gap-2 mb-4 opacity-50">
+                <History size={16} />
+                <span className="text-xs font-bold uppercase tracking-widest">Últimos Movimientos</span>
               </div>
+              <TransactionList transactions={transactions} onDelete={handleDeleteTransaction} />
+
+              {/* Spacer for bottom nav on mobile */}
+              <div className="h-20 md:hidden"></div>
             </div>
-          )}
+          </>
+        )}
 
-          {/* VIEW: DEBT */}
-          {view === 'DEBT' && (
-            <div className="h-full overflow-y-auto">
-              {selectedClient ? (
-                <ClientDetailView
-                  client={selectedClient}
-                  onBack={() => { setSelectedClient(null); fetchData(); }}
-                  activeDate={activeDate}
-                />
-              ) : (
-                <DebtorsView onSelectClient={setSelectedClient} />
-              )}
-            </div>
-          )}
+        {view === 'DEBT' && (
+          <div className="p-4 h-full">
+            {selectedClient ? (
+              <ClientDetailView
+                client={selectedClient}
+                onBack={() => { setSelectedClient(null); fetchData(); }}
+                activeDate={activeDate}
+              />
+            ) : (
+              <DebtorsView onSelectClient={setSelectedClient} />
+            )}
+          </div>
+        )}
 
-          {/* VIEW: HISTORY */}
-          {view === 'HISTORY' && (
-            <div className="h-full overflow-y-auto">
-              <HistoryView />
-            </div>
-          )}
+        {view === 'HISTORY' && (
+          <div className="p-4 h-full">
+            <HistoryView />
+          </div>
+        )}
 
-        </div>
-      </main>
+      </div>
 
+      {/* BOTTOM NAV */}
+      <BottomNav activeView={view} onViewChange={(v) => { setView(v); setSelectedClient(null); }} />
+
+      {/* MODALS */}
       <DebtModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={isFiadoModalOpen}
+        onClose={() => setIsFiadoModalOpen(false)}
         amount={pendingAmount}
         onSubmit={handleFiadoSubmit}
       />
+      <SalidaModal
+        isOpen={isSalidaModalOpen}
+        onClose={() => setIsSalidaModalOpen(false)}
+        amount={pendingAmount}
+        onSubmit={handleSalidaSubmit}
+      />
+
     </div>
   );
 }
 
 export default App;
+

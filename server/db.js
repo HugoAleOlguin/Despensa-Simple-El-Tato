@@ -44,7 +44,7 @@ const initDB = () => {
     db.pragma('synchronous = NORMAL');
 
     // Tabla: Movimientos
-    db.exec(`
+    db.exec(`.
         CREATE TABLE IF NOT EXISTS movimientos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             tipo TEXT CHECK(tipo IN ('VENTA', 'SALIDA', 'PAGO_FIADO')),
