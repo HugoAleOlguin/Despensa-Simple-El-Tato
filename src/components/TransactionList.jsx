@@ -15,7 +15,7 @@ const TransactionList = ({ transactions, onDelete }) => {
                 {transactions.map((t) => (
                     <div key={`${t.id}-${t.tipo}`} className="flex items-center justify-between p-3 bg-slate-800 border border-slate-700 rounded-xl shadow-md hover:bg-slate-700/50 transition-all group">
                         <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-full ${t.tipo === 'VENTA' ? 'bg-emerald-900/50 text-emerald-400' :
+                            <div className={`p-2 rounded-full ${t.tipo === 'VENTA' || t.tipo === 'PAGO_FIADO' ? 'bg-emerald-900/50 text-emerald-400' :
                                 t.tipo === 'SALIDA' ? 'bg-orange-900/50 text-orange-400' :
                                     'bg-red-900/50 text-red-400'
                                 }`}>
@@ -26,8 +26,10 @@ const TransactionList = ({ transactions, onDelete }) => {
                             </div>
                             <div>
                                 <p className="font-bold text-slate-200 text-sm">
-                                    {t.tipo === 'PAGO_FIADO' ? `Fiado: ${t.cliente?.nombre || 'Vecino'}` :
-                                        t.tipo === 'NUEVO_FIADO' ? `Fiado a: ${t.cliente_nombre}` : t.tipo}
+                                    {t.tipo === 'PAGO_FIADO' ? `${t.cliente_nombre || 'Vecino'} - ${t.detalle}` :
+                                        t.tipo === 'NUEVO_FIADO' ? `Fiado a: ${t.cliente_nombre}` :
+                                            t.tipo === 'VENTA' ? 'Venta' :
+                                                t.tipo === 'SALIDA' ? `Salida: ${t.detalle}` : t.tipo}
                                 </p>
                                 <p className="text-xs text-slate-500">{new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                             </div>

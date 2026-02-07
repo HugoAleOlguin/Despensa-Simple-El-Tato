@@ -106,6 +106,17 @@ const broadcastUpdate = (type = 'UPDATE') => {
     });
 };
 
+// --- DEBUG ENDPOINT ---
+app.get('/api/debug/last-movements', (req, res) => {
+    try {
+        const movs = db.prepare('SELECT * FROM movimientos ORDER BY id DESC LIMIT 10').all();
+        const schema = db.prepare("PRAGMA table_info(movimientos)").all();
+        res.json({ schema, movs });
+    } catch (err) {
+        res.json({ error: err.message });
+    }
+});
+
 // --- ENDPOINTS ---
 
 // 1. REGISTRAR MOVIMIENTO (Venta / Salida)
@@ -114,7 +125,7 @@ app.post('/api/movimiento', (req, res) => {
 
     // Validation (Relaxed to allow 0 or strict number check)
     if (monto === undefined || monto === null || isNaN(monto)) return res.status(400).json({ error: 'Monto inválido' });
-    if (!['VENTA', 'SALIDA', 'PAGO_FIADO', 'INGRESO_DEUDA'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
+    if (!['VENTA', 'SALIDA', 'PAGO_FIADO'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
 
     try {
         const queryDate = fecha ? fecha : getTodayString();
@@ -241,39 +252,19 @@ app.post('/api/fiado/pagar-item', (req, res) => {
             db.prepare('UPDATE clientes SET deuda_actual = deuda_actual - ? WHERE id = ?').run(item.monto, item.cliente_id);
 
             // 3. Registrar INGRESO PAGO (movimiento)
+            console.log(`[DEBUG] Insertando movimiento PAGO_FIADO: ClienteID=${item.cliente_id}, Monto=${item.monto}, Detalle=${item.detalle}`);
             db.prepare('INSERT INTO movimientos (tipo, monto, detalle, cliente_id, fecha, timestamp) VALUES (?, ?, ?, ?, ?, ?)').run('PAGO_FIADO', item.monto, `Pago: ${item.detalle}`, item.cliente_id, queryDate, getNowISO());
         });
         transaction();
         broadcastUpdate();
         res.json({ success: true });
     } catch (err) {
+        console.error("[ERROR] /api/fiado/pagar-item:", err);
         res.status(500).json({ error: err.message });
     }
 });
 
-// 6. DEUDORES - Pagos (Baja Deuda / Entrega)
-app.post('/api/fiado/pagar', (req, res) => {
-    const { cliente_id, monto } = req.body;
-    if (monto === undefined || monto === null || isNaN(monto) || !cliente_id) return res.status(400).json({ error: 'Datos inválidos' });
 
-    try {
-        const transaction = db.transaction(() => {
-            // 1. Log deuda (Pago = monto negativo)
-            const timestamp = getNowISO();
-            db.prepare('INSERT INTO deuda_log (cliente_id, monto, detalle, estado, timestamp) VALUES (?, ?, ?, ?, ?)').run(cliente_id, -Number(monto), 'Entrega Dinero', 'PAGADO', timestamp);
-            // 2. Actualizar saldo cliente (Resta)
-            db.prepare('UPDATE clientes SET deuda_actual = deuda_actual - ? WHERE id = ?').run(Number(monto), cliente_id);
-            // 3. Registrar INGRESO PAGO (movimiento de caja)
-            const today = getTodayString();
-            db.prepare('INSERT INTO movimientos (tipo, monto, detalle, fecha, timestamp) VALUES (?, ?, ?, ?, ?)').run('INGRESO_DEUDA', Number(monto), 'Entrega Cliente', today, timestamp);
-        });
-        transaction();
-        broadcastUpdate();
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
 
 // 7. ACTUALIZAR CLIENTE (Teléfono)
 app.put('/api/clientes/:id', (req, res) => {
@@ -293,7 +284,14 @@ app.get('/api/movimientos-dia', (req, res) => {
     const queryDate = fecha ? fecha : getTodayString();
     try {
         // 1. Movimientos de Caja (Venta, Salida, Ingreso Pago)
-        const caja = db.prepare('SELECT id, tipo, monto, detalle, timestamp, NULL as cliente_nombre FROM movimientos WHERE fecha = ?').all(queryDate);
+        const caja = db.prepare(`
+            SELECT m.id, m.tipo, m.monto, m.detalle, m.timestamp, c.nombre as cliente_nombre, m.cliente_id
+            FROM movimientos m
+            LEFT JOIN clientes c ON m.cliente_id = c.id
+            WHERE m.fecha = ?
+        `).all(queryDate);
+
+        console.log("[DEBUG] Movimientos Caja:", caja);
 
         // 2. Movimientos de Fiado (Nuevas Deudas)
         const fiados = db.prepare(`

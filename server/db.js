@@ -44,7 +44,7 @@ const initDB = () => {
     db.pragma('synchronous = NORMAL');
 
     // Tabla: Movimientos
-    db.exec(`.
+    db.exec(`
         CREATE TABLE IF NOT EXISTS movimientos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             tipo TEXT CHECK(tipo IN ('VENTA', 'SALIDA', 'PAGO_FIADO')),
@@ -90,7 +90,8 @@ const initDB = () => {
 
     // Migración manual: Agregar columnas si no existen (para evitar borrar la DB)
     try { db.exec("ALTER TABLE deuda_log ADD COLUMN estado TEXT DEFAULT 'PENDIENTE'"); } catch (e) { }
-    try { db.exec("ALTER TABLE movimientos ADD COLUMN fecha_op DATE"); } catch (e) { } // Por si acaso queramos fecha real vs log
+    try { db.exec("ALTER TABLE movimientos ADD COLUMN fecha_op DATE"); } catch (e) { }
+    try { db.exec("ALTER TABLE movimientos ADD COLUMN cliente_id INTEGER"); } catch (e) { } // Ensure FK column exists
 
     console.log('✅ Tablas inicializadas e Índices optimizados');
 };

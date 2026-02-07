@@ -243,7 +243,9 @@ function App() {
       </div>
 
       {/* BOTTOM NAV */}
-      <BottomNav activeView={view} onViewChange={(v) => { setView(v); setSelectedClient(null); }} />
+      {!selectedClient && (
+        <BottomNav activeView={view} onViewChange={(v) => { setView(v); setSelectedClient(null); }} />
+      )}
 
       {/* MODALS */}
       <DebtModal

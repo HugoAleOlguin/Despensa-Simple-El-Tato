@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, CheckCircle, Clock, Calendar, DollarSign, Plus, Edit2, Save, X } from 'lucide-react';
+import { ArrowLeft, Edit2, Save, X } from 'lucide-react';
 
 const ClientDetailView = ({ client, onBack, activeDate }) => {
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showPayInput, setShowPayInput] = useState(false);
-    const [payAmount, setPayAmount] = useState('');
 
     // Edit Phone Logic
     const [isEditingPhone, setIsEditingPhone] = useState(false);
@@ -40,26 +38,23 @@ const ClientDetailView = ({ client, onBack, activeDate }) => {
         } catch (err) { alert("Error al guardar teléfono"); }
     };
 
-    const handleManualPayment = async () => {
-        if (!payAmount) return;
-        const amount = parseInt(payAmount);
+    const handlePayItem = async (item) => {
+        if (!window.confirm(`¿Marcar como pagado: "${item.detalle}" ($${item.monto})?`)) return;
 
         try {
             const API_URL = `http://${window.location.hostname}:3001`;
-            await fetch(`${API_URL}/api/fiado/pagar`, {
+            await fetch(`${API_URL}/api/fiado/pagar-item`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cliente_id: client.id, monto: amount }) // Just logging a generic payment
+                body: JSON.stringify({ item_id: item.id, fecha_pago: activeDate })
             });
-            setPayAmount('');
-            setShowPayInput(false);
-            fetchHistory();
 
-            // Emulate back button to refresh parent or we need a way to refresh parent balance display
-            // Ideally we should refetch client info in parent, but for now user can go back.
-            // Or we can assume optimistic update? Let's just reload history.
+            // Optimistic update or refresh
+            fetchHistory();
+            // Optional: Update parent client prop if possible, or just let user go back
+            client.deuda_actual -= item.monto;
         } catch (err) {
-            alert("Error al pagar");
+            alert("Error al pagar item");
         }
     };
 
@@ -103,57 +98,40 @@ const ClientDetailView = ({ client, onBack, activeDate }) => {
             </div>
 
             {/* LIST */}
-            <div className="flex-1 px-4 py-4 space-y-2 pb-24">
-                {history.map(item => (
-                    <div key={item.id} className="bg-slate-800 p-3 rounded-xl border border-slate-700 shadow-sm flex justify-between items-center">
-                        <div className="flex items-start gap-3">
-                            <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${item.monto > 0 ? 'bg-red-500' : 'bg-emerald-500'}`}></div>
-                            <div>
-                                <p className="font-bold text-slate-200 text-sm">{item.detalle || 'Sin detalle'}</p>
+            <div className="flex-1 px-4 py-4 space-y-2 pb-6 overflow-y-auto custom-scrollbar">
+                {history.map(item => {
+                    const isDebt = item.monto > 0;
+                    const isPaid = item.estado === 'PAGADO';
+
+                    return (
+                        <div key={item.id} className={`p-3 rounded-xl border flex justify-between items-center ${isPaid ? 'bg-slate-800/50 border-slate-800 opacity-60' : 'bg-slate-800 border-slate-700 shadow-sm'}`}>
+                            <div className="flex items-start gap-3">
+                                <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${isDebt ? (isPaid ? 'bg-slate-500' : 'bg-red-500') : 'bg-emerald-500'}`}></div>
+                                <div>
+                                    <p className={`font-bold text-sm ${isPaid ? 'text-slate-500 line-through' : 'text-slate-200'}`}>{item.detalle || 'Sin detalle'}</p>
+                                    <p className="text-[10px] text-slate-500">{new Date(item.timestamp).toLocaleDateString()} - {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <span className={`font-bold ${isDebt ? (isPaid ? 'text-slate-500' : 'text-red-400') : 'text-emerald-400'}`}>
+                                    {isDebt ? `$${item.monto}` : `- $${Math.abs(item.monto)}`}
+                                </span>
+
+                                {isDebt && !isPaid && (
+                                    <button
+                                        onClick={() => handlePayItem(item)}
+                                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-sm active:scale-95 transition-all"
+                                    >
+                                        PAGAR
+                                    </button>
+                                )}
+                                {isPaid && <span className="text-[10px] font-bold text-emerald-500 border border-emerald-900/30 px-2 py-0.5 rounded bg-emerald-900/10">PAGADO</span>}
                             </div>
                         </div>
-                        <span className={`font-bold ${item.monto > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                            {item.monto > 0 ? `$${item.monto}` : `- $${Math.abs(item.monto)}`}
-                        </span>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
-
-            {/* FLOATING ACTION BUTTON: PAY */}
-            <div className="fixed md:absolute bottom-0 left-0 w-full p-4 bg-slate-800 border-t border-slate-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.3)]">
-                {!showPayInput ? (
-                    <button
-                        onClick={() => setShowPayInput(true)}
-                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl text-xl shadow-lg flex items-center justify-center gap-2"
-                    >
-                        <DollarSign size={24} />
-                        ENTREGAR DINERO
-                    </button>
-                ) : (
-                    <div className="space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-200">
-                        <p className="text-xs font-bold text-slate-400 uppercase">Monto a Entregar:</p>
-                        <div className="flex gap-2">
-                            <input
-                                autoFocus
-                                type="number"
-                                className="flex-1 bg-slate-900 p-4 rounded-xl text-3xl font-bold text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none border border-slate-700"
-                                placeholder="$0"
-                                value={payAmount}
-                                onChange={e => setPayAmount(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleManualPayment()}
-                            />
-                            <button
-                                onClick={handleManualPayment}
-                                className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 rounded-xl font-bold"
-                            >
-                                CONFIRMAR
-                            </button>
-                        </div>
-                        <button onClick={() => setShowPayInput(false)} className="w-full text-slate-500 hover:text-slate-300 text-xs py-2">Cancelar</button>
-                    </div>
-                )}
-            </div>
-
         </div>
     );
 };
