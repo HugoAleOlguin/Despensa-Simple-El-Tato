@@ -77,6 +77,35 @@ const performBackup = () => {
 // Run Backup on Startup
 performBackup();
 
+// --- SSE IMPLEMENTATION ---
+let clients = [];
+
+// Endpoint para suscribirse a eventos
+app.get('/api/events', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    const clientId = Date.now();
+    const newClient = {
+        id: clientId,
+        res
+    };
+
+    clients.push(newClient);
+
+    req.on('close', () => {
+        clients = clients.filter(c => c.id !== clientId);
+    });
+});
+
+// Broadcast a todos los clientes conectados
+const broadcastUpdate = (type = 'UPDATE') => {
+    clients.forEach(client => {
+        client.res.write(`data: ${JSON.stringify({ type })}\n\n`);
+    });
+};
+
 // --- ENDPOINTS ---
 
 // 1. REGISTRAR MOVIMIENTO (Venta / Salida)
@@ -98,6 +127,8 @@ app.post('/api/movimiento', (req, res) => {
         // OR rely on the fact that `queryDate` is what separates the "Ticket".
         // Let's passed explicit local timestamp for ordering.
         const info = stmt.run(tipo, Number(monto), detalle || '', queryDate, getNowISO());
+
+        broadcastUpdate(); // Notificar a todos
         res.json({ success: true, id: info.lastInsertRowid });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -183,6 +214,7 @@ app.post('/api/fiado/nuevo', (req, res) => {
         }
 
         registrarDeuda(finalClienteId, Number(monto), detalle);
+        broadcastUpdate();
         res.json({ success: true, cliente_id: finalClienteId });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -212,6 +244,7 @@ app.post('/api/fiado/pagar-item', (req, res) => {
             db.prepare('INSERT INTO movimientos (tipo, monto, detalle, cliente_id, fecha, timestamp) VALUES (?, ?, ?, ?, ?, ?)').run('PAGO_FIADO', item.monto, `Pago: ${item.detalle}`, item.cliente_id, queryDate, getNowISO());
         });
         transaction();
+        broadcastUpdate();
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -235,6 +268,7 @@ app.post('/api/fiado/pagar', (req, res) => {
             db.prepare('INSERT INTO movimientos (tipo, monto, detalle, fecha, timestamp) VALUES (?, ?, ?, ?, ?)').run('INGRESO_DEUDA', Number(monto), 'Entrega Cliente', today, timestamp);
         });
         transaction();
+        broadcastUpdate();
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -312,6 +346,7 @@ app.delete('/api/transaccion', (req, res) => {
             }
         });
         transaction();
+        broadcastUpdate();
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });

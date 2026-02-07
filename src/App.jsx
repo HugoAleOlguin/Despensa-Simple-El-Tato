@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Keypad from './components/Keypad';
 import TransactionList from './components/TransactionList';
 import DebtModal from './components/DebtModal';
@@ -56,7 +56,7 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isModalOpen]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       // 1. Resumen
       const resResumen = await fetch(`${API_URL}/api/resumen-dia?fecha=${activeDate}`);
@@ -74,14 +74,43 @@ function App() {
     } catch (err) {
       console.error("Error", err);
     }
-  };
+  }, [activeDate]);
 
   useEffect(() => {
     // When date changes, refresh data. UseEffect already handles cleanup.
     // 'setTransactions([])' is optional visually but good for UX so it doesn't show old data while loading
-    setTransactions([]);
+    // setTransactions([]) -> Removing this to avoid flashing on re-fetch
     fetchData();
-  }, [activeDate, view]); // Refetch when changing views
+  }, [fetchData, view]); // Refetch when changing views
+
+  // REAL-TIME UPDATES (SSE)
+  // Ref to track modal state without triggering re-renders of the effect
+  const isModalOpenRef = useRef(isModalOpen);
+  useEffect(() => {
+    isModalOpenRef.current = isModalOpen;
+  }, [isModalOpen]);
+
+  useEffect(() => {
+    const eventSource = new EventSource(`${API_URL}/api/events`);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'UPDATE') {
+          // Only update if modal is NOT open to avoid interrupting user
+          if (!isModalOpenRef.current) {
+            fetchData();
+          }
+        }
+      } catch (e) {
+        console.error("Error parsing SSE", e);
+      }
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [fetchData]); // Reconnect if fetchData (activeDate) changes
 
   const handleKeypadAction = async (tipo, monto) => {
     if (tipo === 'FIADO') {
