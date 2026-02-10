@@ -9,7 +9,7 @@ const BottomNav = ({ activeView, onViewChange }) => {
     ];
 
     return (
-        <div className="bg-slate-900 border-t border-slate-800 p-2 pb-safe fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.3)]">
+        <div className="md:hidden bg-slate-900 border-t border-slate-800 p-2 pb-safe fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.3)]">
             {items.map((item) => {
                 const isActive = activeView === item.id;
                 const Icon = item.icon;

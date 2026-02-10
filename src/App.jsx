@@ -168,10 +168,35 @@ function App() {
 
       {/* 1. HEADER (Compact) */}
       <div className="bg-slate-900 p-3 flex justify-between items-center shadow-md border-b border-slate-800 sticky top-0 z-10">
-        <div>
-          <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Ventas de Hoy</p>
-          <p className="text-2xl font-black text-emerald-400 leading-none">${summary.ventas}</p>
+        <div className="flex items-center gap-4">
+          <div>
+            <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Ventas de Hoy</p>
+            <p className="text-2xl font-black text-emerald-400 leading-none">${summary.ventas}</p>
+          </div>
+
+          {/* DESKTOP NAV */}
+          <div className="hidden md:flex gap-2 ml-8">
+            <button
+              onClick={() => setView('POS')}
+              className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${view === 'POS' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+            >
+              CAJA
+            </button>
+            <button
+              onClick={() => setView('DEBT')}
+              className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${view === 'DEBT' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+            >
+              DEUDAS
+            </button>
+            <button
+              onClick={() => setView('HISTORY')}
+              className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${view === 'HISTORY' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+            >
+              HISTORIAL
+            </button>
+          </div>
         </div>
+
         <div>
           <input
             type="date"
@@ -183,39 +208,41 @@ function App() {
       </div>
 
       {/* VIEW RENDERER */}
-      <div className="flex-1 w-full max-w-md mx-auto md:max-w-4xl md:grid md:grid-cols-2 md:gap-8 md:items-start md:p-6">
+      {/* VIEW RENDERER */}
+      <div className="flex-1 w-full max-w-7xl mx-auto md:p-6">
 
         {view === 'POS' && (
           <>
-            {/* LEFT COLUMN (Mobile: Top) */}
-            <div className="flex flex-col gap-2">
+            <div className="grid md:grid-cols-2 gap-8 items-start max-w-5xl mx-auto">
+              {/* LEFT COLUMN (Mobile: Top) */}
+              <div className="flex flex-col gap-2">
 
-              {/* DISPLAY */}
-              {/* DISPLAY */}
-              <div className="p-4 text-center">
-                <p className="text-[10px] text-slate-500 font-bold uppercase mb-0">Monto Actual</p>
-                <div className="text-5xl font-black text-white tracking-tighter tabular-nums drop-shadow-xl">
-                  {displayValue}
+                {/* DISPLAY */}
+                <div className="p-4 text-center">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase mb-0">Monto Actual</p>
+                  <div className="text-5xl font-black text-white tracking-tighter tabular-nums drop-shadow-xl">
+                    {displayValue}
+                  </div>
                 </div>
+
+                {/* KEYPAD */}
+                <Keypad onInput={handleNumInput} />
+
+                {/* ACTION PANEL */}
+                <ActionPanel onAction={handleActionClick} disabled={!input} />
               </div>
 
-              {/* KEYPAD */}
-              <Keypad onInput={handleNumInput} />
+              {/* RIGHT COLUMN (Mobile: Bottom Scroll) */}
+              <div className="p-4 md:h-[600px] md:overflow-y-auto custom-scrollbar md:bg-slate-900 md:rounded-3xl md:border md:border-slate-800">
+                <div className="flex items-center gap-2 mb-4 opacity-50">
+                  <History size={16} />
+                  <span className="text-xs font-bold uppercase tracking-widest">Últimos Movimientos</span>
+                </div>
+                <TransactionList transactions={transactions} onDelete={handleDeleteTransaction} />
 
-              {/* ACTION PANEL */}
-              <ActionPanel onAction={handleActionClick} disabled={!input} />
-            </div>
-
-            {/* RIGHT COLUMN (Mobile: Bottom Scroll) */}
-            <div className="p-4 md:h-[600px] md:overflow-y-auto custom-scrollbar md:bg-slate-900 md:rounded-3xl md:border md:border-slate-800">
-              <div className="flex items-center gap-2 mb-4 opacity-50">
-                <History size={16} />
-                <span className="text-xs font-bold uppercase tracking-widest">Últimos Movimientos</span>
+                {/* Spacer for bottom nav on mobile */}
+                <div className="h-20 md:hidden"></div>
               </div>
-              <TransactionList transactions={transactions} onDelete={handleDeleteTransaction} />
-
-              {/* Spacer for bottom nav on mobile */}
-              <div className="h-20 md:hidden"></div>
             </div>
           </>
         )}
